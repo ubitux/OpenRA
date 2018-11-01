@@ -4,6 +4,8 @@ MCV:
 		Cost: 3500
 	Tooltip:
 		Name: Mobile Construction Vehicle
+	UpdatesPlayerStatistics:
+		AddToArmyValue: false
 	Buildable:
 		BuildPaletteOrder: 100
 		Prerequisites: anyhq, ~techlevel.medium, fix
@@ -48,6 +50,8 @@ HARV:
 	Tooltip:
 		Name: Harvester
 		GenericName: Harvester
+	UpdatesPlayerStatistics:
+		AddToArmyValue: false
 	Buildable:
 		BuildPaletteOrder: 10
 		Prerequisites: proc
@@ -660,6 +664,8 @@ TRUCK:
 		Cost: 500
 	Tooltip:
 		Name: Supply Truck
+	UpdatesPlayerStatistics:
+		AddToArmyValue: false
 	Selectable:
 		Priority: 6
 	Health:
