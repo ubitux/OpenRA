@@ -164,6 +164,8 @@
 ^Vehicle:
 	Inherits@1: ^ExistsInWorld
 	Inherits@2: ^SpriteActor
+	UpdatesPlayerStatistics:
+		AddToArmyValue: true
 	Tooltip:
 		GenericName: Unit
 	Huntable:
@@ -265,6 +267,8 @@
 	Inherits@1: ^ExistsInWorld
 	Inherits@2: ^GainsExperience
 	Inherits@3: ^SpriteActor
+	UpdatesPlayerStatistics:
+		AddToArmyValue: true
 	Tooltip:
 		GenericName: Unit
 	Huntable:
@@ -335,6 +339,8 @@
 ^Plane:
 	Inherits@1: ^ExistsInWorld
 	Inherits@2: ^SpriteActor
+	UpdatesPlayerStatistics:
+		AddToArmyValue: true
 	Interactable:
 	Tooltip:
 		GenericName: Unit
