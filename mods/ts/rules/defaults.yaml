@@ -642,6 +642,8 @@
 ^Soldier:
 	Inherits@1: ^Infantry
 	Inherits@2: ^RegularInfantryDeath
+	UpdatesPlayerStatistics:
+		AddToArmyValue: true
 	RevealsShroud:
 		Range: 4c0
 	MustBeDestroyed:
@@ -661,6 +663,8 @@
 	Inherits@1: ^Infantry
 	Inherits@2: ^EmpDisable
 	Inherits@3: ^HealsOnTiberium
+	UpdatesPlayerStatistics:
+		AddToArmyValue: true
 	ExplosionOnDamageTransition:
 		Weapon: CyborgExplode
 		DamageState: Critical
@@ -706,6 +710,8 @@
 	Inherits@4: ^Cloakable
 	Inherits@5: ^DamagedByVeins
 	Inherits@CRATESTATS: ^CrateStatModifiers
+	UpdatesPlayerStatistics:
+		AddToArmyValue: true
 	Huntable:
 	OwnerLostAction:
 		Action: Kill
@@ -800,6 +806,8 @@
 ^Aircraft:
 	Inherits@2: ^ExistsInWorld
 	Inherits@3: ^Cloakable
+	UpdatesPlayerStatistics:
+		AddToArmyValue: true
 	Huntable:
 	OwnerLostAction:
 		Action: Kill
