@@ -239,6 +239,7 @@
 		Action: Kill
 	DrawLineToTarget:
 	UpdatesPlayerStatistics:
+		AddToArmyValue: true
 	Mobile:
 		Locomotor: wheeled
 		TurnSpeed: 5
@@ -413,6 +414,7 @@
 ^Soldier:
 	Inherits: ^Infantry
 	UpdatesPlayerStatistics:
+		AddToArmyValue: true
 	MustBeDestroyed:
 	ProximityCaptor:
 		Types: Infantry
@@ -469,6 +471,7 @@
 		Action: Kill
 	DrawLineToTarget:
 	UpdatesPlayerStatistics:
+		AddToArmyValue: true
 	Mobile:
 		Locomotor: naval
 	SelectionDecorations:
@@ -516,6 +519,7 @@
 	Armor:
 		Type: Light
 	UpdatesPlayerStatistics:
+		AddToArmyValue: true
 	AppearsOnRadar:
 		UseLocation: true
 	SelectionDecorations:
