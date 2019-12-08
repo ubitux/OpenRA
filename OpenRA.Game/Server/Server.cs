@@ -803,6 +803,31 @@ namespace OpenRA.Server
 
 						break;
 					}
+
+				case "WinState":
+					{
+						var data = MiniYaml.FromString(o.TargetString)[0];
+						var playerID = int.Parse(data.Key);
+						WinState winState = (WinState)Enum.Parse(typeof(WinState), data.Value.Value, true);
+
+						var client = LobbyInfo.ClientWithIndex(playerID);
+						if (client == null)
+							return;
+
+						if (winState == WinState.Undefined || winState == client.WinState)
+							return;
+
+						if (client.WinState != WinState.Undefined && client.WinState != winState)
+						{
+							Log.Write("server", "WinState disagreement: {0} vs {1}", client.WinState, winState);
+							return;
+						}
+
+						client.WinState = winState;
+						Log.Write("server", "Outcome Player {0}: {1}", client.Name, client.WinState);
+						Console.WriteLine("[{0}] Outcome Player {1}: {2}", DateTime.Now.ToString(Settings.TimestampFormat), client.Name, client.WinState);
+						break;
+					}
 			}
 		}
 

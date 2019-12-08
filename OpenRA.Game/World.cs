@@ -550,6 +550,8 @@ namespace OpenRA
 			{
 				pi.Outcome = player.WinState;
 				pi.OutcomeTimestampUtc = DateTime.UtcNow;
+				var yaml = new List<MiniYamlNode>() { new MiniYamlNode(pi.ClientIndex.ToString(), pi.Outcome.ToString()) };
+				IssueOrder(Order.FromTargetString("WinState", yaml.WriteToString(), true));
 			}
 		}
 
