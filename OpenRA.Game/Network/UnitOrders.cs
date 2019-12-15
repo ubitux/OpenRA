@@ -48,8 +48,38 @@ namespace OpenRA.Network
 				case "Disconnected":
 					{
 						var client = orderManager.LobbyInfo.ClientWithIndex(clientId);
-						if (client != null)
-							client.State = Session.ClientState.Disconnected;
+						if (client == null)
+							break;
+
+						client.State = Session.ClientState.Disconnected;
+
+						if (world == null)
+							break;
+
+						if (client.Team == 0) {
+							var p = world.FindPlayerByClient(client);
+
+							var s_order = new Order("Surrender", p.PlayerActor, true);
+							foreach (var t in s_order.Subject.TraitsImplementing<IResolveOrder>())
+								t.ResolveOrder(s_order.Subject, s_order);
+						} else {
+							var remainingPlayers = world.Players.Where(p => {
+									var c = world.LobbyInfo.ClientWithIndex(p.ClientIndex);
+									return c.Team == client.Team && p.WinState != WinState.Lost && c.State != Session.ClientState.Disconnected;
+							});
+							if (!remainingPlayers.Any()) {
+								var disconnectedPlayers = world.Players.Where(p => {
+										var c = world.LobbyInfo.ClientWithIndex(p.ClientIndex);
+										return c.Team == client.Team && p.WinState != WinState.Lost;
+								});
+								foreach (var p in remainingPlayers) {
+									var s_order = new Order("Surrender", p.PlayerActor, true);
+									foreach (var t in s_order.Subject.TraitsImplementing<IResolveOrder>())
+										t.ResolveOrder(s_order.Subject, s_order);
+								}
+							}
+						}
+
 						break;
 					}
 
