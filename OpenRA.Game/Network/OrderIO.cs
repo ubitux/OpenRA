@@ -43,6 +43,18 @@ namespace OpenRA.Network
 			return ms.GetBuffer();
 		}
 
+		public static byte[] SerializeDefeatState(ulong defeatState)
+		{
+			var ms = new MemoryStream(1 + 8);
+			using (var writer = new BinaryWriter(ms))
+			{
+				writer.Write((byte)OrderType.DefeatState);
+				writer.Write(defeatState);
+			}
+
+			return ms.GetBuffer();
+		}
+
 		public static int2 ReadInt2(this BinaryReader r)
 		{
 			var x = r.ReadInt32();

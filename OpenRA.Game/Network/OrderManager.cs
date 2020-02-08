@@ -56,6 +56,7 @@ namespace OpenRA.Network
 
 		bool disposed;
 		bool generateSyncReport = false;
+		ulong defeatState;
 
 		void OutOfSync(int frame)
 		{
@@ -125,6 +126,8 @@ namespace OpenRA.Network
 						frameData.ClientQuit(clientId, frame);
 					else if (packet.Length >= 5 && packet[4] == (byte)OrderType.SyncHash)
 						CheckSync(packet);
+					else if (packet.Length == 4 + 1 + 8 && packet[4] == (byte)OrderType.DefeatState)
+						CheckDefeatState(packet);
 					else if (frame == 0)
 						immediatePackets.Add(Pair.New(clientId, packet));
 					else
@@ -163,6 +166,30 @@ namespace OpenRA.Network
 				syncForFrame.Add(frame, packet);
 		}
 
+		int lastFrameDefeatState;
+		ulong lastDefeatState;
+
+		void CheckDefeatState(byte[] packet)
+		{
+			var frame = BitConverter.ToInt32(packet, 0);
+			var playerDefeatState = BitConverter.ToUInt64(packet, 5);
+
+			if (frame >= lastFrameDefeatState && lastDefeatState != playerDefeatState)
+			{
+				// Two players disagree with the state for a given frame
+				if (frame == lastFrameDefeatState)
+					OutOfSync(frame);
+
+				// A defeat has been removed from the current state
+				var newDefeats = lastDefeatState ^ playerDefeatState;
+				if ((lastDefeatState & newDefeats) != 0)
+					OutOfSync(frame);
+
+				lastDefeatState = playerDefeatState;
+				lastFrameDefeatState = frame;
+			}
+		}
+
 		public bool IsReadyForNextFrame
 		{
 			get { return NetFrameNumber >= 1 && frameData.IsReadyForFrame(NetFrameNumber); }
@@ -191,6 +218,13 @@ namespace OpenRA.Network
 
 			foreach (var order in frameData.OrdersForFrame(World, NetFrameNumber))
 				UnitOrders.ProcessOrder(this, World, order.Client, order.Order);
+
+			if (World.DefeatState != defeatState)
+			{
+				// Sync Hash and Defeat State share the same sync requirement
+				Connection.SendSync(NetFrameNumber, OrderIO.SerializeDefeatState(World.DefeatState));
+				defeatState = World.DefeatState;
+			}
 
 			if (NetFrameNumber + FramesAhead >= GameSaveLastSyncFrame)
 				Connection.SendSync(NetFrameNumber, OrderIO.SerializeSync(World.SyncHash()));

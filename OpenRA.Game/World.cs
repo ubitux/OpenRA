@@ -45,6 +45,7 @@ namespace OpenRA
 		public readonly IModelCache ModelCache;
 		public LongBitSet<PlayerBitMask> AllPlayersMask = default(LongBitSet<PlayerBitMask>);
 		public readonly LongBitSet<PlayerBitMask> NoPlayersMask = default(LongBitSet<PlayerBitMask>);
+		public ulong DefeatState;
 
 		public Player[] Players = new Player[0];
 
@@ -552,6 +553,9 @@ namespace OpenRA
 			{
 				pi.Outcome = player.WinState;
 				pi.OutcomeTimestampUtc = DateTime.UtcNow;
+
+				if (pi.Outcome == WinState.Lost)
+					DefeatState |= 1UL << gameInfo.Players.IndexOf(pi);
 			}
 		}
 
