@@ -88,6 +88,9 @@ namespace OpenRA
 		[Desc("Allow clients to see the country of other clients.")]
 		public bool EnableGeoIP = true;
 
+		[Desc("Record game replays")]
+		public bool RecordGameReplays = false;
+
 		public ServerSettings Clone()
 		{
 			return (ServerSettings)MemberwiseClone();

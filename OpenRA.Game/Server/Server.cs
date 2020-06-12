@@ -18,6 +18,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using OpenRA.FileFormats;
 using OpenRA.Network;
 using OpenRA.Primitives;
 using OpenRA.Support;
@@ -69,6 +70,11 @@ namespace OpenRA.Server
 
 		volatile ActionQueue delayedActions = new ActionQueue();
 		int waitingForAuthenticationCallback = 0;
+
+		ReplayRecorder Recorder;
+		GameInformation gameInfo;
+		int lastFrameDefeatState;
+		ulong lastDefeatState;
 
 		public ServerState State
 		{
@@ -124,6 +130,9 @@ namespace OpenRA.Server
 		{
 			foreach (var t in serverTraits.WithInterface<IEndGame>())
 				t.GameEnded(this);
+
+			if (Recorder != null)
+				Recorder.Dispose();
 		}
 
 		public Server(List<IPEndPoint> endpoints, ServerSettings settings, ModData modData, ServerType type)
@@ -201,6 +210,13 @@ namespace OpenRA.Server
 
 			new Thread(_ =>
 			{
+				if (Settings.RecordGameReplays)
+				{
+					if (Recorder != null)
+						Recorder.Dispose();
+					Recorder = new ReplayRecorder(() => { return Game.TimestampedFilename(extra: "Server-"); });
+				}
+
 				foreach (var t in serverTraits.WithInterface<INotifyServerStart>())
 					t.ServerStarted(this);
 
@@ -632,6 +648,9 @@ namespace OpenRA.Server
 			var from = conn != null ? conn.PlayerIndex : 0;
 			foreach (var c in Conns.Except(conn).ToList())
 				DispatchOrdersToClient(c, from, frame, data);
+
+			if (Recorder != null)
+				Recorder.ReceiveFrame(from, frame, data);
 		}
 
 		public void DispatchOrders(Connection conn, int frame, byte[] data)
@@ -640,6 +659,41 @@ namespace OpenRA.Server
 				InterpretServerOrders(conn, data);
 			else
 				DispatchOrdersToClients(conn, frame, data);
+
+			if (Recorder != null)
+			{
+				if (data.Length > 0 && data[0] == (byte)OrderType.DefeatState)
+				{
+					var playerDefeatState = BitConverter.ToUInt64(data, 1);
+
+					if (frame >= lastFrameDefeatState && lastDefeatState != playerDefeatState)
+					{
+						var newDefeats = lastDefeatState ^ playerDefeatState;
+
+						for (var i = 0; i < 64; i++)
+						{
+							if ((newDefeats & (1UL << i)) != 0)
+							{
+								var defeatedPlayer = gameInfo.Players.FirstOrDefault(p => p.ClientIndex == i);
+								if (defeatedPlayer == null)
+									continue;
+								defeatedPlayer.Outcome = WinState.Lost;
+								defeatedPlayer.OutcomeTimestampUtc = DateTime.UtcNow;
+
+								// TODO: mark other as winners at the end
+								// TODO: handle disconnects
+
+								// XXX: dropme
+								var suffix = defeatedPlayer.Team != 0 ? " (Team {0})".F(defeatedPlayer.Team) : "";
+								Console.WriteLine("[{0}] {1}{2} is defeated", DateTime.Now.ToString(Settings.TimestampFormat), defeatedPlayer.Name, suffix);
+							}
+						}
+
+						lastDefeatState = playerDefeatState;
+						lastFrameDefeatState = frame;
+					}
+				}
+			}
 
 			if (GameSave != null && conn != null)
 				GameSave.DispatchOrders(conn, frame, data);
@@ -1011,12 +1065,51 @@ namespace OpenRA.Server
 			// TODO: Enable for multiplayer (non-dedicated servers only) once the lobby UI has been created
 			LobbyInfo.GlobalSettings.GameSavesEnabled = Type != ServerType.Dedicated && LobbyInfo.NonBotClients.Count() == 1;
 
+			if (Recorder != null)
+			{
+				gameInfo = new GameInformation
+				{
+					Mod = Game.ModData.Manifest.Id,
+					Version = Game.ModData.Manifest.Metadata.Version,
+					MapUid = Map.Uid,
+					MapTitle = Map.Title,
+					StartTimeUtc = DateTime.UtcNow
+				};
+				Recorder.Metadata = new ReplayMetadata(gameInfo);
+				foreach (var conn in Conns)
+				{
+					var client = GetClient(conn);
+					var player = new GameInformation.Player
+					{
+						ClientIndex = client.Index,
+						Name = client.Name,
+						IsHuman = client.Bot == null,
+						IsBot = client.Bot != null,
+						FactionName = "Random",
+						FactionId = "?",
+						Color = client.Color,
+						Team = client.Team,
+						//SpawnPoint = spawn, //client.SpawnPoint,
+						IsRandomFaction = true, //runtimePlayer.Faction.InternalName != client.Faction,
+						IsRandomSpawnPoint = true, //runtimePlayer.SpawnPoint != client.SpawnPoint,
+						Fingerprint = client.Fingerprint,
+					};
+					gameInfo.Players.Add(player);
+					Console.WriteLine("Add player #{0}: {1}", client.Index, client.Name);
+				}
+			}
+
 			SyncLobbyInfo();
 			State = ServerState.GameStarted;
 
 			foreach (var c in Conns)
+			{
+				var data = new[] { (byte)OrderType.Disconnect };
 				foreach (var d in Conns)
-					DispatchOrdersToClient(c, d.PlayerIndex, 0x7FFFFFFF, new[] { (byte)OrderType.Disconnect });
+					DispatchOrdersToClient(c, d.PlayerIndex, 0x7FFFFFFF, data);
+				if (Recorder != null)
+					Recorder.ReceiveFrame(c.PlayerIndex, 0x7FFFFFFF, data);
+			}
 
 			if (GameSave == null && LobbyInfo.GlobalSettings.GameSavesEnabled)
 				GameSave = new GameSave();
